@@ -1,0 +1,11 @@
+version: '3.9'
+services:
+  postgres:
+    image: ankane/pgvector
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=PUodKyjHpiDb!CAVtC*udpZ8
+      - POSTGRES_DB=igluu_stage
+    ports:
+      - "5436:5432"
