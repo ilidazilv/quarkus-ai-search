@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { gql, useLazyQuery } from '@apollo/client';
 import PropertyList from './PropertyList';
+import ChatBot from './ChatBot';
 
 const SEARCH_PROPERTIES = gql`
   query SearchProperties($searchTerm: String!) {
@@ -16,12 +17,21 @@ const SEARCH_PROPERTIES = gql`
 function PropertySearchPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [executeSearch, { loading, error, data }] = useLazyQuery(SEARCH_PROPERTIES);
+    const [properties, setProperties] = useState(null);
 
     const handleSearch = () => {
         if (searchTerm.trim()) {
             executeSearch({ variables: { searchTerm } });
         }
     };
+
+    // Handler for properties received from the chatbot
+    const handleChatbotProperties = (propertiesFromChatbot) => {
+        setProperties(propertiesFromChatbot);
+    };
+
+    // Determine which properties to display - either from GraphQL or WebSocket
+    const displayProperties = properties || (data?.search ? data.search : null);
 
     return (
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -47,6 +57,9 @@ function PropertySearchPage() {
                     <p className="mt-2 text-sm text-gray-500">
                         Try natural language queries like "apartments near the beach" or "houses with garden in rural areas"
                     </p>
+                    <p className="mt-1 text-sm text-blue-600">
+                        You can also chat with our property assistant using the chat icon in the bottom right corner!
+                    </p>
                 </div>
 
                 {error && (
@@ -61,8 +74,8 @@ function PropertySearchPage() {
                     </div>
                 )}
 
-                {data?.search && (
-                    <PropertyList properties={data.search} />
+                {displayProperties && (
+                    <PropertyList properties={displayProperties} />
                 )}
 
                 {loading && (
@@ -71,7 +84,7 @@ function PropertySearchPage() {
                     </div>
                 )}
 
-                {data?.search?.length === 0 && !loading && (
+                {displayProperties?.length === 0 && !loading && (
                     <div className="text-center py-12">
                         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -81,6 +94,9 @@ function PropertySearchPage() {
                     </div>
                 )}
             </div>
+
+            {/* Add ChatBot component */}
+            <ChatBot onPropertyResults={handleChatbotProperties} />
         </div>
     );
 }

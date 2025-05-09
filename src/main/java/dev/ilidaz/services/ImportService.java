@@ -44,7 +44,7 @@ public class ImportService {
             throw new IllegalStateException("Missing movies file: " + path);
         }
 
-//        embeddingStore.removeAll();
+//    embeddingStore.removeAll();
 
         EmbeddingStoreIngestor ingester = EmbeddingStoreIngestor.builder()
                 .embeddingModel(embeddingModel)
@@ -53,20 +53,40 @@ public class ImportService {
 
         List<Document> docs = new ArrayList<>();
         List<Property> properties = parsePropertiesFile(path);
+        final int BATCH_SIZE = 1000;
+        int processedCount = 0;
 
-        properties.forEach(property -> {
+        for (Property property : properties) {
             if (Property.findById(property.getId()) != null) {
-                return;
+                continue;
             }
-            save(property);
-            Metadata metadata = Metadata.from(Map.of("id", property.id, "singleLine", property.singleLine, "title", property.title));
-            Document document = Document.from(property.description, metadata);
-            docs.add(document);
-        });
 
-        Log.info("Ingesting properties...");
-        ingester.ingest(docs);
-        Log.info("Application initalized!");
+            save(property);
+
+            Metadata metadata = Metadata.from(Map.of(
+                    "id", property.id,
+                    "singleLine", property.singleLine,
+                    "title", property.title
+            ));
+
+            Document document = Document.from(
+                    property.description + " Location - " + property.singleLine + " ID - " + property.id,
+                    metadata);
+
+            docs.add(document);
+            processedCount++;
+
+            // When we reach batch size or finish processing all properties, ingest the batch
+            if (docs.size() >= BATCH_SIZE || processedCount == properties.size()) {
+                Log.info("Ingesting batch of %s properties (%s of %s)...".formatted(
+                        docs.size(), processedCount, properties.size()));
+
+                ingester.ingest(docs);
+                docs.clear(); // Clear the list for the next batch
+            }
+        }
+
+        Log.info("Application initialized!");
     }
 
     public boolean importProperty(PropertyDto data) {
